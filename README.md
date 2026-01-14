@@ -54,7 +54,7 @@ lgrep watch .
 
 ```bash
 # Clone and build
-git clone https://github.com/yourusername/lgrep
+git clone https://github.com/reedme1234/lgrep
 cd lgrep
 cargo build --release
 
