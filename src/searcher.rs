@@ -6,11 +6,13 @@
 use crate::config::Config;
 use crate::embedder::Embedder;
 use crate::error::Result;
+use crate::filter::SearchFilter;
 use crate::index::{SearchResult, VectorIndex};
 use colored::*;
+use regex::Regex;
 use std::path::Path;
 
-/// Semantic searcher
+/// Semantic searcher with filtering and hybrid search support
 pub struct Searcher {
     index: VectorIndex,
     embedder: Embedder,
@@ -35,8 +37,75 @@ impl Searcher {
 
     /// Search for chunks matching the query
     pub fn search(&self, query: &str, top_k: usize) -> Result<Vec<SearchResult>> {
+        self.search_with_filter(query, top_k, None)
+    }
+
+    /// Search with optional filters
+    pub fn search_with_filter(
+        &self,
+        query: &str,
+        top_k: usize,
+        filter: Option<&SearchFilter>,
+    ) -> Result<Vec<SearchResult>> {
         let query_embedding = self.embedder.embed_one(query)?;
-        self.index.search(&query_embedding, top_k)
+        
+        // Get more results than needed to account for filtering
+        let fetch_count = if filter.is_some() {
+            (top_k * 3).max(100) // Fetch 3x more when filtering
+        } else {
+            top_k
+        };
+        
+        let mut results = self.index.search(&query_embedding, fetch_count)?;
+
+        // Apply filters if provided
+        if let Some(filter) = filter {
+            results.retain(|r| filter.matches(&r.chunk, r.score));
+            
+            // Apply max_results limit from filter
+            if let Some(max) = filter.max_results {
+                results.truncate(max);
+            } else {
+                results.truncate(top_k);
+            }
+        } else {
+            results.truncate(top_k);
+        }
+
+        Ok(results)
+    }
+
+    /// Hybrid search: combines semantic search with keyword/regex matching
+    pub fn hybrid_search(
+        &self,
+        semantic_query: &str,
+        keyword_pattern: Option<&str>,
+        top_k: usize,
+        filter: Option<&SearchFilter>,
+    ) -> Result<Vec<SearchResult>> {
+        // First do semantic search
+        let mut results = self.search_with_filter(semantic_query, top_k * 2, filter)?;
+
+        // If keyword pattern provided, boost matching results
+        if let Some(pattern) = keyword_pattern {
+            if let Ok(regex) = Regex::new(pattern) {
+                // Score boost for keyword matches
+                const KEYWORD_BOOST: f32 = 0.2;
+
+                for result in &mut results {
+                    if regex.is_match(&result.chunk.text) {
+                        // Boost score but cap at 1.0
+                        result.score = (result.score + KEYWORD_BOOST).min(1.0);
+                    }
+                }
+
+                // Re-sort by boosted scores
+                results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+            }
+        }
+
+        results.truncate(top_k);
+        Ok(results)
     }
 
     /// Get index statistics

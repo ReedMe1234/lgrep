@@ -6,8 +6,8 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use colored::*;
 use lgrep::{
-    format_results, format_results_json, Config, EmbeddingModel, IndexWatcher, Indexer, Searcher,
-    VectorIndex,
+    format_results, format_results_json, Config, EmbeddingModel, IndexWatcher, Indexer,
+    QueryHistory, SearchFilter, Searcher, VectorIndex,
 };
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
@@ -104,6 +104,30 @@ enum Commands {
         /// Sync index before searching
         #[arg(short = 's', long)]
         sync: bool,
+
+        /// Filter by file extensions (comma-separated, e.g., "rs,py")
+        #[arg(long)]
+        ext: Option<String>,
+
+        /// Filter by languages (comma-separated, e.g., "rust,python")
+        #[arg(long)]
+        lang: Option<String>,
+
+        /// Filter by path pattern (regex)
+        #[arg(long)]
+        path_pattern: Option<String>,
+
+        /// Exclude path pattern (regex)
+        #[arg(long)]
+        exclude: Option<String>,
+
+        /// Minimum similarity score (0.0 to 1.0)
+        #[arg(long)]
+        min_score: Option<f32>,
+
+        /// Keyword pattern for hybrid search (regex)
+        #[arg(short = 'k', long)]
+        keyword: Option<String>,
     },
 
     /// Show index statistics
@@ -115,6 +139,25 @@ enum Commands {
 
     /// List available embedding models
     Models,
+
+    /// Show query history
+    History {
+        /// Path to index
+        #[arg(default_value = ".")]
+        path: PathBuf,
+
+        /// Number of recent queries to show
+        #[arg(short = 'n', long, default_value = "10")]
+        limit: usize,
+
+        /// Show top frequent queries instead of recent
+        #[arg(long)]
+        top: bool,
+
+        /// Clear history
+        #[arg(long)]
+        clear: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -142,9 +185,34 @@ fn main() -> Result<()> {
             content,
             json,
             sync,
-        }) => cmd_search(query, path, max_count, content, json, sync),
+            ext,
+            lang,
+            path_pattern,
+            exclude,
+            min_score,
+            keyword,
+        }) => cmd_search(
+            query,
+            path,
+            max_count,
+            content,
+            json,
+            sync,
+            ext,
+            lang,
+            path_pattern,
+            exclude,
+            min_score,
+            keyword,
+        ),
         Some(Commands::Stats { path }) => cmd_stats(path),
         Some(Commands::Models) => cmd_models(),
+        Some(Commands::History {
+            path,
+            limit,
+            top,
+            clear,
+        }) => cmd_history(path, limit, top, clear),
         None => {
             // Default: search if query provided, otherwise show help
             if cli.query.is_empty() {
@@ -175,6 +243,12 @@ fn main() -> Result<()> {
                 cli.content,
                 cli.json,
                 cli.sync,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
             )
         }
     }
@@ -227,6 +301,12 @@ fn cmd_search(
     content: bool,
     json: bool,
     sync: bool,
+    ext: Option<String>,
+    lang: Option<String>,
+    path_pattern: Option<String>,
+    exclude: Option<String>,
+    min_score: Option<f32>,
+    keyword: Option<String>,
 ) -> Result<()> {
     let path = path.canonicalize()?;
 
@@ -252,9 +332,62 @@ fn cmd_search(
         }
     }
 
+    // Build filter from options
+    let mut filter = SearchFilter::new();
+    let mut has_filter = false;
+
+    if let Some(ref extensions) = ext {
+        filter = filter.with_extensions(extensions.split(',').map(|s| s.to_string()).collect());
+        has_filter = true;
+    }
+
+    if let Some(ref languages) = lang {
+        filter = filter.with_languages(languages.split(',').map(|s| s.to_string()).collect());
+        has_filter = true;
+    }
+
+    if let Some(ref pattern) = path_pattern {
+        filter = filter.with_path_pattern(pattern.clone());
+        has_filter = true;
+    }
+
+    if let Some(ref pattern) = exclude {
+        filter = filter.with_exclude_pattern(pattern.clone());
+        has_filter = true;
+    }
+
+    if let Some(score) = min_score {
+        filter = filter.with_min_score(score);
+        has_filter = true;
+    }
+
+    let filter_opt = if has_filter { Some(&filter) } else { None };
+
     // Search
     let searcher = Searcher::load(&path)?;
-    let results = searcher.search(&query, max_count)?;
+    let results = if let Some(kw) = keyword.as_deref() {
+        // Hybrid search with keyword
+        searcher.hybrid_search(&query, Some(kw), max_count, filter_opt)?
+    } else if has_filter {
+        // Semantic search with filters
+        searcher.search_with_filter(&query, max_count, filter_opt)?
+    } else {
+        // Basic semantic search
+        searcher.search(&query, max_count)?
+    };
+
+    // Save to history
+    if let Ok(mut history) = QueryHistory::load(&index_dir) {
+        let filter_desc = if has_filter {
+            Some(format!(
+                "ext:{:?} lang:{:?} path:{:?}",
+                ext, lang, path_pattern
+            ))
+        } else {
+            None
+        };
+        let _ = history.add_query(query.clone(), results.len(), filter_desc);
+    }
 
     if results.is_empty() {
         println!("No results found for: {}", query.yellow());
@@ -309,6 +442,78 @@ fn cmd_models() -> Result<()> {
     println!("    Best for: Multi-language codebases");
     println!();
     println!("Usage: {} --model nomic", "lgrep index".yellow());
+
+    Ok(())
+}
+
+fn cmd_history(path: PathBuf, limit: usize, top: bool, clear: bool) -> Result<()> {
+    let path = path.canonicalize()?;
+    let index_dir = path.join(".lgrep");
+
+    if !index_dir.exists() {
+        eprintln!(
+            "{} No index found. Run {} first.",
+            "Error:".red().bold(),
+            "lgrep index".yellow()
+        );
+        std::process::exit(1);
+    }
+
+    let mut history = QueryHistory::load(&index_dir)?;
+
+    if clear {
+        history.clear()?;
+        println!("{} History cleared", "✓".green());
+        return Ok(());
+    }
+
+    if history.is_empty() {
+        println!("No search history yet.");
+        return Ok(());
+    }
+
+    println!("{}", "Search History".cyan().bold());
+    println!();
+
+    if top {
+        // Show top frequent queries
+        println!("Top {} most frequent queries:\n", limit);
+        for (i, (query, count)) in history.top_queries(limit).iter().enumerate() {
+            println!(
+                "  {} {} (used {} times)",
+                format!("[{}]", i + 1).dimmed(),
+                query.green(),
+                count.to_string().yellow()
+            );
+        }
+    } else {
+        // Show recent queries
+        println!("Last {} searches:\n", limit);
+        for (i, entry) in history.recent(limit).iter().enumerate() {
+            let time = std::time::UNIX_EPOCH + std::time::Duration::from_secs(entry.timestamp);
+            let datetime = chrono::DateTime::<chrono::Local>::from(time);
+            let time_str = datetime.format("%Y-%m-%d %H:%M").to_string();
+
+            println!(
+                "  {} {} ({} results) - {}",
+                format!("[{}]", i + 1).dimmed(),
+                entry.query.green(),
+                entry.result_count.to_string().yellow(),
+                time_str.dimmed()
+            );
+
+            if let Some(ref filters) = entry.filters {
+                println!("      filters: {}", filters.dimmed());
+            }
+        }
+    }
+
+    println!();
+    println!(
+        "Total queries: {} | Use {} to clear",
+        history.len().to_string().yellow(),
+        "lgrep history --clear".cyan()
+    );
 
     Ok(())
 }

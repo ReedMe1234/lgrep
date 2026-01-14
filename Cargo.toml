@@ -59,6 +59,12 @@ colored = "2.1"
 # Number of CPUs
 num_cpus = "1.16"
 
+# Regex for filtering and hybrid search
+regex = "1.10"
+
+# DateTime formatting for history
+chrono = "0.4"
+
 [dev-dependencies]
 tempfile = "3.8"
 
