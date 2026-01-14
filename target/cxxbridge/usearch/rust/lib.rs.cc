@@ -1,0 +1,1 @@
+../../../release/build/usearch-10906e8c7c2f09bc/out/cxxbridge/sources/usearch/rust/lib.rs.cc

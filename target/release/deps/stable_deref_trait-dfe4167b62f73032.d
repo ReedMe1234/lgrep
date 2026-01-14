@@ -1,0 +1,7 @@
+/Users/jasonreed/Development/lgrep/target/release/deps/stable_deref_trait-dfe4167b62f73032.d: /Users/jasonreed/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/stable_deref_trait-1.2.1/src/lib.rs
+
+/Users/jasonreed/Development/lgrep/target/release/deps/libstable_deref_trait-dfe4167b62f73032.rlib: /Users/jasonreed/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/stable_deref_trait-1.2.1/src/lib.rs
+
+/Users/jasonreed/Development/lgrep/target/release/deps/libstable_deref_trait-dfe4167b62f73032.rmeta: /Users/jasonreed/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/stable_deref_trait-1.2.1/src/lib.rs
+
+/Users/jasonreed/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/stable_deref_trait-1.2.1/src/lib.rs:

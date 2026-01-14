@@ -1,0 +1,65 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo lock file (uncomment if building a library)
+# Cargo.lock
+
+# ONNX models and embeddings (can be large)
+*.onnx
+*.bin
+*.safetensors
+
+# Index files
+.lgrep/
+*.index
+*.vectors
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Rust profiling
+perf.data
+perf.data.old
+flamegraph.svg
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Log files
+*.log
+
+# Test coverage
+tarpaulin-report.html
+cobertura.xml
+lcov.info
+
+# Documentation build
+/target/doc/
+
+# Environment variables
+.env
+.env.local

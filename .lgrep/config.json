@@ -1,0 +1,9 @@
+{
+  "root_path": "/Users/jasonreed/Development/lgrep",
+  "index_dir": "/Users/jasonreed/Development/lgrep/.lgrep",
+  "model": "AllMiniLmL6V2",
+  "chunk_size": 512,
+  "chunk_overlap": 64,
+  "max_file_size": 10485760,
+  "workers": 14
+}

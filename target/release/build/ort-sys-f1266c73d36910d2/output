@@ -1,0 +1,34 @@
+cargo:rerun-if-env-changed=LIBONNXRUNTIME_NO_PKG_CONFIG
+cargo:rerun-if-env-changed=PKG_CONFIG_aarch64-apple-darwin
+cargo:rerun-if-env-changed=PKG_CONFIG_aarch64_apple_darwin
+cargo:rerun-if-env-changed=HOST_PKG_CONFIG
+cargo:rerun-if-env-changed=PKG_CONFIG
+cargo:rerun-if-env-changed=LIBONNXRUNTIME_STATIC
+cargo:rerun-if-env-changed=LIBONNXRUNTIME_DYNAMIC
+cargo:rerun-if-env-changed=PKG_CONFIG_ALL_STATIC
+cargo:rerun-if-env-changed=PKG_CONFIG_ALL_DYNAMIC
+cargo:rerun-if-env-changed=PKG_CONFIG_PATH_aarch64-apple-darwin
+cargo:rerun-if-env-changed=PKG_CONFIG_PATH_aarch64_apple_darwin
+cargo:rerun-if-env-changed=HOST_PKG_CONFIG_PATH
+cargo:rerun-if-env-changed=PKG_CONFIG_PATH
+cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_aarch64-apple-darwin
+cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_aarch64_apple_darwin
+cargo:rerun-if-env-changed=HOST_PKG_CONFIG_LIBDIR
+cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR
+cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_aarch64-apple-darwin
+cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_aarch64_apple_darwin
+cargo:rerun-if-env-changed=HOST_PKG_CONFIG_SYSROOT_DIR
+cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR
+onnxruntime not found using pkg-config, falling back to manual setup.
+cargo:rerun-if-env-changed=ORT_LIB_LOCATION
+cargo:rerun-if-env-changed=ORT_LIB_PROFILE
+cargo:rerun-if-env-changed=ORT_PREFER_DYNAMIC_LINK
+cargo:rerun-if-env-changed=ORT_CXX_STDLIB
+cargo:rerun-if-env-changed=CXXSTDLIB
+selected feature set: none
+cargo:rustc-link-lib=c++
+cargo:rustc-link-lib=framework=Foundation
+cargo:rustc-link-lib=static=onnxruntime
+cargo:rustc-link-search=native=/Users/jasonreed/Library/Caches/ort.pyke.io/dfbin/aarch64-apple-darwin/5EAFA0AF54D630C4D4D9F459CB95E3CFF442993F0FFA50402695186F9B1A38A5/onnxruntime/lib
+cargo:rustc-link-lib=c++
+cargo:rustc-link-lib=framework=Foundation

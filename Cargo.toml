@@ -1,0 +1,76 @@
+[package]
+name = "lgrep"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["Your Name <you@example.com>"]
+license = "MIT OR Apache-2.0"
+description = "Local semantic grep - 100% offline semantic code search"
+repository = "https://github.com/yourusername/lgrep"
+keywords = ["semantic-search", "grep", "embeddings", "code-search", "local"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+
+[dependencies]
+# CLI - pin major versions
+clap = { version = "4.4", features = ["derive", "env"] }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Local embeddings - fastembed uses ONNX runtime, no API needed
+fastembed = "4"
+
+# Vector search - usearch is fast and lightweight
+usearch = "2"
+
+# File handling
+ignore = "0.4"
+walkdir = "2.4"
+notify = { version = "6.1", default-features = false, features = ["macos_kqueue"] }
+notify-debouncer-mini = "0.4"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+
+# Hashing for change detection
+sha2 = "0.10"
+hex = "0.4"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Progress bars
+indicatif = "0.17"
+
+# Parallel processing
+rayon = "1.10"
+
+# Colored output
+colored = "2.1"
+
+# Number of CPUs
+num_cpus = "1.16"
+
+[dev-dependencies]
+tempfile = "3.8"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 1
+
+[[bin]]
+name = "lgrep"
+path = "src/main.rs"
